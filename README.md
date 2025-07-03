@@ -2,7 +2,11 @@
 
 The purpose of this project is to provide the simplest possible template for developers to create their own native Android app for communicating with the Texas Instruments' NIRScan Nano Product.
 
-This project allows the user to scan for and connect to the NanoScan using Bluetooth Low Energy (BLE).  It is feature poor, and the intent is for you to take the KSTNanoSDK.java files, add it to your own product, and use this SDK as an easy means of communicating with the NanoScan. 
+This project allows the user to scan for and connect to the NanoScan using Bluetooth Low Energy (BLE).  It is feature poor, and the intent is for you to take the KSTNanoSDK.java files, add it to your own product, and use this SDK as an easy means of communicating with the NanoScan.
+
+## Kotlin and Compose Migration
+
+The sample app now includes Kotlin sources and Jetpack Compose. The `InfoActivity` screen has been rewritten using Compose to demonstrate how the library can integrate with modern Android UI components.
 
 Please consider searching on the TODO pragma marks throughout this code to see where we are taking it next. Our understanding of the NIRScan Nano, the firmware, the hardware, and the basic business logic of interacting with the device has all been under development and very dynamic.  There are "less than ideal" things in this source, but we believe it's in a great state to let you build great things!  Tell us what you're doing with this source via [email](mailto://sensing@kstechnologies.com)  or [Twitter](http://www.twitter.com/kstechnologies) .
 
