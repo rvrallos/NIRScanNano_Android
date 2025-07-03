@@ -3,13 +3,13 @@ apply plugin: 'com.android.application'
 
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    namespace "com.kstechnologies.NanoScan"
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.kstechnologies.NanoScan"
         minSdkVersion 21
-        targetSdkVersion 22
+        targetSdkVersion 34
         versionCode 13
         versionName "1.0"
     }
@@ -28,9 +28,9 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.android.support:support-v4:23.1.1'
-    compile project(':MPChartLib')
-    compile 'com.opencsv:opencsv:3.6'
-    compile (name: 'nirscannanolibrary', ext:'aar')
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:support-v4:23.1.1'
+    implementation project(':MPChartLib')
+    implementation 'com.opencsv:opencsv:3.6'
+    implementation(name: 'nirscannanolibrary', ext:'aar')
 }
