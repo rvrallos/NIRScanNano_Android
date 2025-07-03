@@ -1,6 +1,7 @@
-apply plugin: 'com.android.application'
-
-
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
 
 android {
     namespace "com.kstechnologies.NanoScan"
@@ -13,10 +14,24 @@ android {
         versionCode 13
         versionName "1.0"
     }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.12'
+    }
+
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
 }
@@ -33,4 +48,11 @@ dependencies {
     implementation project(':MPChartLib')
     implementation 'com.opencsv:opencsv:3.6'
     implementation(name: 'nirscannanolibrary', ext:'aar')
+
+    implementation platform('androidx.compose:compose-bom:2024.05.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    implementation 'androidx.activity:activity-compose:1.9.0'
 }
