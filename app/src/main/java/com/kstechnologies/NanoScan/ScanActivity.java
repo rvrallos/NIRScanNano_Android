@@ -11,8 +11,10 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.os.Bundle;
+import android.content.Intent;
+import android.location.LocationManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -33,17 +35,11 @@ import java.util.ArrayList;
 import com.kstechnologies.nirscannanolibrary.KSTNanoSDK;
 import com.kstechnologies.nirscannanolibrary.SettingsManager;
 
-/**
- * Activity for scanning for advertising Nano devices over BLE
- * This allows the user to specify a preferred Nano to use in the future.
- * The preferred Nano will be connected to first in environments with more than one Nano
- */
 public class ScanActivity extends Activity {
 
     private Handler mHandler;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
-    private static final String DEVICE_NAME = "NIRScanNano";
     private ArrayList<KSTNanoSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
     private NanoScanAdapter nanoScanAdapter;
     private static Context mContext;
@@ -56,7 +52,7 @@ public class ScanActivity extends Activity {
         setContentView(R.layout.activity_scan);
         mContext = this;
 
-        //Set up action bar title and enable back button
+        // Set up action bar title and enable back button
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setTitle(getString(R.string.select_nano));
@@ -64,15 +60,31 @@ public class ScanActivity extends Activity {
         }
         ListView lv_nanoDevices = (ListView) findViewById(R.id.lv_nanoDevices);
 
-        //Start scanning for devices that match DEVICE_NAME
+        // Get Bluetooth manager and adapters
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
+
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, "Bluetooth not supported on this device.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        if (!mBluetoothAdapter.isEnabled()) {
+            Toast.makeText(this, "Please enable Bluetooth to scan for devices!", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        if (mBluetoothLeScanner == null) {
+            Toast.makeText(this, "Could not access BLE scanner, try restarting your device.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
-        //Create adapter for the NanoDevice objects returned from a BLE scan
+        // Create adapter for the NanoDevice objects returned from a BLE scan
         nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
-
         lv_nanoDevices.setAdapter(nanoScanAdapter);
 
         lv_nanoDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -87,7 +99,7 @@ public class ScanActivity extends Activity {
     }
 
     /**
-     * Request Bluetooth permissions and start scanning once granted.
+     * Request Bluetooth and Location permissions and start scanning once granted.
      */
     private void checkPermissionsAndStartScan() {
         ArrayList<String> perms = new ArrayList<>();
@@ -107,6 +119,23 @@ public class ScanActivity extends Activity {
         if (!perms.isEmpty()) {
             ActivityCompat.requestPermissions(this, perms.toArray(new String[0]), PERMISSION_REQ_CODE);
         } else {
+            // Check if Location is enabled (required for BLE scanning on Android < 12)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                boolean locationEnabled = false;
+                if (lm != null) {
+                    try {
+                        locationEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                                || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                    } catch (Exception ex) {
+                        locationEnabled = false;
+                    }
+                }
+                if (!locationEnabled) {
+                    Toast.makeText(this, "Please enable Location services (GPS) for Bluetooth scanning!", Toast.LENGTH_LONG).show();
+                    // (You can finish() here if you want to force the user to enable location)
+                }
+            }
             scanLeDevice(true);
         }
     }
@@ -123,7 +152,7 @@ public class ScanActivity extends Activity {
                 }
             }
             if (granted) {
-                scanLeDevice(true);
+                checkPermissionsAndStartScan();
             } else {
                 Toast.makeText(this, "Bluetooth permissions are required", Toast.LENGTH_SHORT).show();
                 finish();
@@ -132,13 +161,9 @@ public class ScanActivity extends Activity {
     }
 
     /**
-     * Provide user with a dialog that asks if they are sure they want to use the Nano with the
-     * specified mac as their preferred device
-     *
-     * @param mac MAC address of Nano
+     * Confirmation dialog for setting a preferred Nano device.
      */
     public void confirmationDialog(String mac) {
-
         final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
         final String deviceMac = mac;
         alertDialogBuilder.setTitle(mContext.getResources().getString(R.string.nano_confirmation_title));
@@ -147,7 +172,7 @@ public class ScanActivity extends Activity {
         alertDialogBuilder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
-                alertDialog.dismiss();
+                if (alertDialog != null) alertDialog.dismiss();
                 SettingsManager.storeStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, deviceMac);
                 finish();
             }
@@ -156,7 +181,7 @@ public class ScanActivity extends Activity {
         alertDialogBuilder.setNegativeButton(getResources().getString(R.string.cancel), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                alertDialog.dismiss();
+                if (alertDialog != null) alertDialog.dismiss();
             }
         });
 
@@ -165,14 +190,7 @@ public class ScanActivity extends Activity {
     }
 
     /**
-     * Callback function for Bluetooth scanning. This function provides the instance of the
-     * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
-     * data (scanRecord).
-     * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link ScanActivity#DEVICE_NAME} is found, a call is made to connect
-     * to the device. Also, the Bluetooth should stop scanning, even if
-     * the {@link NanoBLEService#SCAN_PERIOD} has not expired
+     * BLE scan callback.
      */
     private ScanCallback mLeScanCallback = new ScanCallback() {
         @Override
@@ -180,55 +198,44 @@ public class ScanActivity extends Activity {
             super.onScanResult(callbackType, result);
 
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
-            if (name != null && name.equals(DEVICE_NAME) && result.getScanRecord() != null) {
-                Boolean isDeviceInList = false;
-                KSTNanoSDK.NanoDevice nanoDevice = new KSTNanoSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
-                for (KSTNanoSDK.NanoDevice d : nanoDeviceList) {
-                    if (d.getNanoMac().equals(device.getAddress())) {
-                        isDeviceInList = true;
-                        d.setRssi(result.getRssi());
-                        nanoScanAdapter.notifyDataSetChanged();
-                    }
-                }
-                if (!isDeviceInList) {
-                    nanoDeviceList.add(nanoDevice);
+            if (device.getName() == null || device.getAddress() == null) return; // skip nameless
+            // Filter for NIRScan Nano devices if you want (optional):
+            // if (!device.getName().toLowerCase().contains("nano")) return;
+
+            // Avoid duplicates
+            boolean isDeviceInList = false;
+            for (KSTNanoSDK.NanoDevice d : nanoDeviceList) {
+                if (d.getNanoMac().equals(device.getAddress())) {
+                    isDeviceInList = true;
+                    d.setRssi(result.getRssi());
                     nanoScanAdapter.notifyDataSetChanged();
+                    break;
                 }
+            }
+            if (!isDeviceInList) {
+                nanoDeviceList.add(new KSTNanoSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes()));
+                nanoScanAdapter.notifyDataSetChanged();
             }
         }
     };
 
-
-    /*
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
         if (id == android.R.id.home) {
             this.finish();
+            return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     /**
-     * Scans for Bluetooth devices on the specified interval {@link NanoBLEService#SCAN_PERIOD}.
-     * This function uses the handler {@link ScanActivity#mHandler} to delay call to stop
-     * scanning until after the interval has expired. The start and stop functions take an
-     * LeScanCallback parameter that specifies the callback function when a Bluetooth device
-     * has been found {@link NewScanActivity#mLeScanCallback}
-     *
-     * @param enable Tells the Bluetooth adapter {@link ScanActivity#mBluetoothAdapter} if
-     *               it should start or stop scanning
+     * Scans for Bluetooth devices for a set interval.
      */
     private void scanLeDevice(final boolean enable) {
-        if(mBluetoothLeScanner == null){
-            Toast.makeText(ScanActivity.this, "Could not open LE scanner", Toast.LENGTH_SHORT).show();
-        }else {
+        if (mBluetoothLeScanner == null) {
+            Toast.makeText(ScanActivity.this, "Could not open BLE scanner", Toast.LENGTH_SHORT).show();
+        } else {
             if (enable) {
                 // Stops scanning after a pre-defined scan period.
                 mHandler.postDelayed(new Runnable() {
@@ -245,12 +252,10 @@ public class ScanActivity extends Activity {
     }
 
     /**
-     * Custom adapter that holds {@link KSTNanoSDK.NanoDevice} objects to be used in a listview.
-     * This adapter contains device name, MAC, and RSSI
+     * Custom adapter that holds NanoDevice objects.
      */
     private class NanoScanAdapter extends ArrayAdapter<KSTNanoSDK.NanoDevice> {
         private final ArrayList<KSTNanoSDK.NanoDevice> nanoDevices;
-
 
         public NanoScanAdapter(Context context, ArrayList<KSTNanoSDK.NanoDevice> values) {
             super(context, -1, values);
@@ -285,11 +290,20 @@ public class ScanActivity extends Activity {
     }
 
     /**
-     * View holder for {@link KSTNanoSDK.NanoDevice} objects
+     * View holder for NanoDevice objects
      */
     private class ViewHolder {
         private TextView nanoName;
         private TextView nanoMac;
         private TextView nanoRssi;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Always stop scan when leaving activity
+        if (mBluetoothLeScanner != null) {
+            mBluetoothLeScanner.stopScan(mLeScanCallback);
+        }
     }
 }

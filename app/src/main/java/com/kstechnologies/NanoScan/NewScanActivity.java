@@ -133,7 +133,6 @@ public class NewScanActivity extends Activity {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private Handler mHandler;
-    private static final String DEVICE_NAME = "NIRScanNano";
     private boolean connected;
     private AlertDialog alertDialog;
     private TextView tv_scan_conf;
@@ -854,7 +853,7 @@ public class NewScanActivity extends Activity {
                 finish();
             }
 
-            //Start scanning for devices that match DEVICE_NAME
+            //Start scanning for available BLE devices
             final BluetoothManager bluetoothManager =
                     (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             mBluetoothAdapter = bluetoothManager.getAdapter();
@@ -883,8 +882,7 @@ public class NewScanActivity extends Activity {
      * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
      * data (scanRecord).
      * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link NewScanActivity#DEVICE_NAME} is found, a call is made to connect
+     * When a Bluetooth device is found a call is made to connect
      * to the device. Also, the Bluetooth should stop scanning, even if
      * the {@link NanoBLEService#SCAN_PERIOD} has not expired
      */
@@ -893,13 +891,10 @@ public class NewScanActivity extends Activity {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
-            if (name != null) {
-                if (device.getName().equals(DEVICE_NAME)) {
-                    mNanoBLEService.connect(device.getAddress());
-                    connected = true;
-                    scanLeDevice(false);
-                }
+            if (device.getName() != null) {
+                mNanoBLEService.connect(device.getAddress());
+                connected = true;
+                scanLeDevice(false);
             }
         }
     };
@@ -909,8 +904,7 @@ public class NewScanActivity extends Activity {
      * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
      * data (scanRecord).
      * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link NewScanActivity#DEVICE_NAME} is found, a call is made to connect
+     * When a Bluetooth device matching the preferred address is found, a call is made to connect
      * to the device. Also, the Bluetooth should stop scanning, even if
      * the {@link NanoBLEService#SCAN_PERIOD} has not expired
      */
@@ -919,14 +913,11 @@ public class NewScanActivity extends Activity {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
-            if (name != null) {
-                if (device.getName().equals(DEVICE_NAME)) {
-                    if (device.getAddress().equals(preferredDevice)) {
-                        mNanoBLEService.connect(device.getAddress());
-                        connected = true;
-                        scanPreferredLeDevice(false);
-                    }
+            if (device.getName() != null) {
+                if (device.getAddress().equals(preferredDevice)) {
+                    mNanoBLEService.connect(device.getAddress());
+                    connected = true;
+                    scanPreferredLeDevice(false);
                 }
             }
         }

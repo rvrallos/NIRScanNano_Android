@@ -30,11 +30,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f1f74da1-a86d-4134-a18f-e3eb80aa437b" name="Default" comment="First Commit Android9+">
+      <change beforePath="$PROJECT_DIR$/.idea/modules/app/NanoScan.app.iml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/GraphActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/GraphActivity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/NewScanActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/NewScanActivity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/ScanActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/kstechnologies/NanoScan/ScanActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/local.properties" beforeDir="false" afterPath="$PROJECT_DIR$/local.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -2730,7 +2731,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "And9+",
+    "git-widget-placeholder": "And9+v1",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/user/Documents/GitHub/NIRScanNano_Android",
