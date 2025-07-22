@@ -20,8 +20,12 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.content.pm.PackageManager;
+import android.Manifest;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.viewpager.widget.PagerAdapter;
@@ -138,6 +142,46 @@ public class NewScanActivity extends Activity {
     private KSTNanoSDK.ScanConfiguration activeConf;
 
     private Menu mMenu;
+    private boolean serviceBound = false;
+    private static final int PERMISSION_REQ_CODE = 1;
+
+    /**
+     * Request required Bluetooth permissions and bind to the service once granted.
+     */
+    private void checkPermissionsAndBindService() {
+        ArrayList<String> perms = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.BLUETOOTH_CONNECT);
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            }
+        }
+
+        if (!perms.isEmpty()) {
+            ActivityCompat.requestPermissions(this, perms.toArray(new String[0]), PERMISSION_REQ_CODE);
+        } else {
+            Intent gattServiceIntent = new Intent(this, NanoBLEService.class);
+            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+            serviceBound = true;
+
+            //Register all needed broadcast receivers
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanDataReadyReceiver, scanDataReadyFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(refReadyReceiver, refReadyFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(notifyCompleteReceiver, notifyCompleteFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalCoeffReceiver, requestCalCoeffFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalMatrixReceiver, requestCalMatrixFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(disconnReceiver, disconnFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanConfReceiver, scanConfFilter);
+            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanStartedReceiver, scanStartedFilter);
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -236,19 +280,8 @@ public class NewScanActivity extends Activity {
         btn_scan.setClickable(false);
         btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.btn_unavailable));
 
-        //Bind to the service. This will start it, and call the start command function
-        Intent gattServiceIntent = new Intent(this, NanoBLEService.class);
-        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-
-        //Register all needed broadcast receivers
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(scanDataReadyReceiver, scanDataReadyFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(refReadyReceiver, refReadyFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(notifyCompleteReceiver, notifyCompleteFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalCoeffReceiver, requestCalCoeffFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalMatrixReceiver, requestCalMatrixFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(disconnReceiver, disconnFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(scanConfReceiver, scanConfFilter);
-        LocalBroadcastManager.getInstance(mContext).registerReceiver(scanStartedReceiver, scanStartedFilter);
+        //Bind to the service after required permissions are granted
+        checkPermissionsAndBindService();
     }
 
     @Override
@@ -289,7 +322,10 @@ public class NewScanActivity extends Activity {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        unbindService(mServiceConnection);
+        if(serviceBound){
+            unbindService(mServiceConnection);
+            serviceBound = false;
+        }
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(scanDataReadyReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(refReadyReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(notifyCompleteReceiver);
@@ -303,6 +339,26 @@ public class NewScanActivity extends Activity {
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.saveOS, btn_os.isChecked());
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.saveSD, btn_sd.isChecked());
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.continuousScan, btn_continuous.isChecked());
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQ_CODE) {
+            boolean granted = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    granted = false;
+                    break;
+                }
+            }
+            if (granted) {
+                checkPermissionsAndBindService();
+            } else {
+                Toast.makeText(this, "Bluetooth permissions are required", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }
     }
 
     /*

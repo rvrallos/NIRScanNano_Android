@@ -261,9 +261,10 @@ public class GraphActivity extends Activity {
             Float fReflectance = Float.parseFloat(mReflectanceString.get(i));
             Float fWavelength = Float.parseFloat(mXValues.get(i));
 
-            mIntensityFloat.add(new Entry(fIntensity, i));
-            mAbsorbanceFloat.add(new Entry(fAbsorbance, i));
-            mReflectanceFloat.add(new Entry(fReflectance, i));
+            // MPAndroidChart v3.x expects the x-value first
+            mIntensityFloat.add(new Entry(i, fIntensity));
+            mAbsorbanceFloat.add(new Entry(i, fAbsorbance));
+            mReflectanceFloat.add(new Entry(i, fReflectance));
             mWavelengthFloat.add(fWavelength);
 
             }catch (NumberFormatException e){
@@ -613,7 +614,7 @@ public class GraphActivity extends Activity {
             set1.setColor(Color.BLACK);
             set1.setCircleColor(Color.RED);
             set1.setLineWidth(1f);
-            set1.setCircleSize(3f);
+            set1.setCircleRadius(3f);
             set1.setDrawCircleHole(true);
             set1.setValueTextSize(9f);
             set1.setFillAlpha(65);
@@ -643,7 +644,7 @@ public class GraphActivity extends Activity {
             set1.setColor(Color.BLACK);
             set1.setCircleColor(Color.GREEN);
             set1.setLineWidth(1f);
-            set1.setCircleSize(3f);
+            set1.setCircleRadius(3f);
             set1.setDrawCircleHole(true);
             set1.setValueTextSize(9f);
             set1.setFillAlpha(65);
@@ -679,7 +680,7 @@ public class GraphActivity extends Activity {
             set1.setColor(Color.BLACK);
             set1.setCircleColor(Color.BLUE);
             set1.setLineWidth(1f);
-            set1.setCircleSize(3f);
+            set1.setCircleRadius(3f);
             set1.setDrawCircleHole(true);
             set1.setValueTextSize(9f);
             set1.setFillAlpha(65);
@@ -711,7 +712,7 @@ public class GraphActivity extends Activity {
             set1.setColor(Color.BLACK);
             set1.setCircleColor(Color.BLACK);
             set1.setLineWidth(1f);
-            set1.setCircleSize(3f);
+            set1.setCircleRadius(3f);
             set1.setDrawCircleHole(true);
             set1.setValueTextSize(9f);
             set1.setFillAlpha(65);
