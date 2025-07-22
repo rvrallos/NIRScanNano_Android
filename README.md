@@ -37,7 +37,7 @@ If you just want to test out the app and get data as fast as possible, consider 
 *  Import libdlpspectrum.so into the project and include the KSTNanoSDK and NanoBLEService files.
 
 * Use the NanoBLEService as a template for interacting with the Nano over BLE, and the KSTNanoSDK as a way to issue specific commands to the Nano.
-
+* On Android 10 and higher, scan files are saved in the app's external files directory to comply with scoped storage.
 # Contact Information
 
 Please [contact KST](mailto://sensing@kstechnologies.com) for any questions you may have regarding this SDK or for requesting custom hardware, firmware, app, or cloud development work based on TI's DLP Technology.  You can also [visit the KS Technologies website](http://www.kstechnologies.com) for more information about our company.

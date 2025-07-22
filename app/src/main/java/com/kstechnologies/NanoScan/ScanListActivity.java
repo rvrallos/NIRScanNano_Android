@@ -240,14 +240,15 @@ public class ScanListActivity extends Activity {
             csvFiles.add(filename);
         }
 
-        String nanoExtPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-        File yourDir = new File(nanoExtPath, "/");
-        for (File f : yourDir.listFiles()) {
-            if (f.isFile()) {
-                String fileName = f.getName();
-                if (fileName.contains(".csv")) {
-                    //Log.d(TAG, "found:" + fileName);
-                    csvFiles.add(fileName);
+        File yourDir = getExternalFilesDir(null);
+        if (yourDir != null) {
+            for (File f : yourDir.listFiles()) {
+                if (f.isFile()) {
+                    String fileName = f.getName();
+                    if (fileName.contains(".csv")) {
+                        //Log.d(TAG, "found:" + fileName);
+                        csvFiles.add(fileName);
+                    }
                 }
             }
         }
@@ -258,8 +259,10 @@ public class ScanListActivity extends Activity {
      * @param name name of the file to delete
      */
     public void removeFile(String name) {
-        String nanoExtPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-        File yourDir = new File(nanoExtPath, "/");
+        File yourDir = getExternalFilesDir(null);
+        if (yourDir == null) {
+            return;
+        }
         for (File f : yourDir.listFiles()) {
             if (f.isFile()) {
                 String fileName = f.getName();

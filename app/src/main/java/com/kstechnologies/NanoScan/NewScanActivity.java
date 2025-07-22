@@ -59,6 +59,7 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -764,12 +765,12 @@ public class NewScanActivity extends Activity {
         }
 
         if (saveOS) {
-            String csvOS = android.os.Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + prefix + currentTime + ".csv";
+            File csvFile = new File(getExternalFilesDir(null), prefix + currentTime + ".csv");
 
             CSVWriter writer;
             try {
                 writer = new CSVWriter(
-                        new FileWriter(csvOS),
+                        new FileWriter(csvFile),
                         ',',
                         CSVWriter.NO_QUOTE_CHARACTER,
                         CSVWriter.DEFAULT_ESCAPE_CHARACTER,
@@ -816,7 +817,7 @@ public class NewScanActivity extends Activity {
         }
 
         if (saveOS) {
-            String csv = android.os.Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + prefix + currentTime + ".dict";
+            File csv = new File(getExternalFilesDir(null), prefix + currentTime + ".dict");
 
             CSVWriter writer;
             try {

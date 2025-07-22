@@ -174,8 +174,9 @@ public class GraphActivity extends Activity {
             reader = new BufferedReader(new InputStreamReader(is));
         } catch (Resources.NotFoundException e) {
             try {
-                reader = new BufferedReader(new FileReader(android.os.Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + fileName));
-                dictReader = new BufferedReader(new FileReader(android.os.Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + fileName.replace(".csv", ".dict")));
+                File extDir = getExternalFilesDir(null);
+                reader = new BufferedReader(new FileReader(new File(extDir, fileName)));
+                dictReader = new BufferedReader(new FileReader(new File(extDir, fileName.replace(".csv", ".dict"))));
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
                 Toast.makeText(mContext, getString(R.string.file_not_found), Toast.LENGTH_SHORT).show();
@@ -751,8 +752,8 @@ public class GraphActivity extends Activity {
      * @return File with the specified name
      */
     public File findFile(String name) {
-        String nanoExtPath = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-        File yourDir = new File(nanoExtPath, "/");
+        File yourDir = getExternalFilesDir(null);
+        if (yourDir == null) return null;
         for (File f : yourDir.listFiles()) {
             if (f.isFile()) {
                 String fileName = f.getName();
