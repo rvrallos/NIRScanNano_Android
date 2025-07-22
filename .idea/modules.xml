@@ -2,9 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/MPChartLib/MPChartLib.iml" filepath="$PROJECT_DIR$/MPChartLib/MPChartLib.iml" />
-      <module fileurl="file://$PROJECT_DIR$/NIRScanNano_Android.iml" filepath="$PROJECT_DIR$/NIRScanNano_Android.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/NanoScan.iml" filepath="$PROJECT_DIR$/.idea/modules/NanoScan.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/NanoScan.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/NanoScan.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/NanoScan.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/NanoScan.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/NanoScan.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/NanoScan.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/NanoScan.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/NanoScan.app.unitTest.iml" />
     </modules>
   </component>
 </project>

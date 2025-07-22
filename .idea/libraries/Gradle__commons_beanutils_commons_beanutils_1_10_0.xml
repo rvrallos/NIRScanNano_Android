@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Gradle: commons-beanutils:commons-beanutils:1.10.0" type="java-imported" external-system-id="GRADLE">
+    <properties groupId="commons-beanutils" artifactId="commons-beanutils" version="1.10.0" baseVersion="1.10.0" />
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/commons-beanutils/commons-beanutils/1.10.0/db165c75534817bf971c530838138011fbe2dca2/commons-beanutils-1.10.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/commons-beanutils/commons-beanutils/1.10.0/92a4b6abd9fa9bfe4d16b3014bdde70660e1ab58/commons-beanutils-1.10.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/commons-beanutils/commons-beanutils/1.10.0/d9c97e7939f82f38a1d3cc702f563bc5ddb56389/commons-beanutils-1.10.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

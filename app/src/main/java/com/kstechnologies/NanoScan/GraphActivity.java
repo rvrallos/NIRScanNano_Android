@@ -9,8 +9,8 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,13 +23,16 @@ import android.widget.Toast;
 
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.LimitLine;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.kstechnologies.nirscannanolibrary.KSTNanoSDK;
 import com.kstechnologies.nirscannanolibrary.ScanListDictionary;
 
@@ -43,6 +46,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.kstechnologies.nirscannanolibrary.SettingsManager;
 
@@ -276,28 +280,28 @@ public class GraphActivity extends Activity {
             if (f > maxWavelength) maxWavelength = f;
         }
 
-        float minAbsorbance = mAbsorbanceFloat.get(0).getVal();
-        float maxAbsorbance = mAbsorbanceFloat.get(0).getVal();
+        float minAbsorbance = mAbsorbanceFloat.get(0).getY();
+        float maxAbsorbance = mAbsorbanceFloat.get(0).getY();
 
         for (Entry e : mAbsorbanceFloat) {
-            if (e.getVal() < minAbsorbance) minAbsorbance = e.getVal();
-            if (e.getVal() > maxAbsorbance) maxAbsorbance = e.getVal();
+            if (e.getY() < minAbsorbance) minAbsorbance = e.getY();
+            if (e.getY() > maxAbsorbance) maxAbsorbance = e.getY();
         }
 
-        float minReflectance = mReflectanceFloat.get(0).getVal();
-        float maxReflectance = mReflectanceFloat.get(0).getVal();
+        float minReflectance = mReflectanceFloat.get(0).getY();
+        float maxReflectance = mReflectanceFloat.get(0).getY();
 
         for (Entry e : mReflectanceFloat) {
-            if (e.getVal() < minReflectance) minReflectance = e.getVal();
-            if (e.getVal() > maxReflectance) maxReflectance = e.getVal();
+            if (e.getY() < minReflectance) minReflectance = e.getY();
+            if (e.getY() > maxReflectance) maxReflectance = e.getY();
         }
 
-        float minIntensity = mIntensityFloat.get(0).getVal();
-        float maxIntensity = mIntensityFloat.get(0).getVal();
+        float minIntensity = mIntensityFloat.get(0).getY();
+        float maxIntensity = mIntensityFloat.get(0).getY();
 
         for (Entry e : mIntensityFloat) {
-            if (e.getVal() < minIntensity) minIntensity = e.getVal();
-            if (e.getVal() > maxIntensity) maxIntensity = e.getVal();
+            if (e.getY() < minIntensity) minIntensity = e.getY();
+            if (e.getY() > maxIntensity) maxIntensity = e.getY();
         }
 
         ArrayList<KSTNanoSDK.ScanListManager> graphList = new ScanListDictionary(this).getScanList(fileName);
@@ -490,171 +494,75 @@ public class GraphActivity extends Activity {
             ViewGroup layout = (ViewGroup) inflater.inflate(customPagerEnum.getLayoutResId(), collection, false);
             collection.addView(layout);
 
-            if (customPagerEnum.getLayoutResId() == R.layout.page_graph_intensity) {
-                LineChart mChart = (LineChart) layout.findViewById(R.id.lineChartInt);
-                mChart.setDrawGridBackground(false);
+            LineChart mChart = null;
+            ChartType chartType = null;
+            ArrayList<Entry> chartData = null;
 
-                // no description text
-                mChart.setDescription("");
-                //mChart.setNoDataTextDescription("You need to provide data for the chart.");
+            int layoutResId = customPagerEnum.getLayoutResId();
 
-                // enable touch gestures
-                mChart.setTouchEnabled(true);
-
-                // enable scaling and dragging
-                mChart.setDragEnabled(true);
-                mChart.setScaleEnabled(true);
-
-                // if disabled, scaling can be done on x- and y-axis separately
-                mChart.setPinchZoom(true);
-
-                // x-axis limit line
-                LimitLine llXAxis = new LimitLine(10f, "Index 10");
-                llXAxis.setLineWidth(4f);
-                llXAxis.enableDashedLine(10f, 10f, 0f);
-                llXAxis.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-                llXAxis.setTextSize(10f);
-
-                XAxis xAxis = mChart.getXAxis();
-                xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-
-                YAxis leftAxis = mChart.getAxisLeft();
-                leftAxis.removeAllLimitLines(); // reset all limit lines to avoid overlapping lines
-
-
-                mChart.setAutoScaleMinMaxEnabled(true);
-
-                leftAxis.setStartAtZero(true);
-                leftAxis.enableGridDashedLine(10f, 10f, 0f);
-
-                // limit lines are drawn behind data (and not on top)
-                leftAxis.setDrawLimitLinesBehindData(true);
-
-                mChart.getAxisRight().setEnabled(false);
-
-
-                // add data
-                setData(mChart, mXValues, mIntensityFloat, ChartType.INTENSITY);
-
-                mChart.animateX(2500, Easing.EasingOption.EaseInOutQuart);
-
-                // get the legend (only possible after setting data)
-                Legend l = mChart.getLegend();
-
-                // modify the legend ...
-                l.setForm(Legend.LegendForm.LINE);
-                return layout;
-            } else if (customPagerEnum.getLayoutResId() == R.layout.page_graph_absorbance) {
-
-                LineChart mChart = (LineChart) layout.findViewById(R.id.lineChartAbs);
-                mChart.setDrawGridBackground(false);
-
-                // no description text
-                mChart.setDescription("");
-                //mChart.setNoDataTextDescription("You need to provide data for the chart.");
-
-                // enable touch gestures
-                mChart.setTouchEnabled(true);
-
-                // enable scaling and dragging
-                mChart.setDragEnabled(true);
-                mChart.setScaleEnabled(true);
-
-                // if disabled, scaling can be done on x- and y-axis separately
-                mChart.setPinchZoom(true);
-
-                // x-axis limit line
-                LimitLine llXAxis = new LimitLine(10f, "Index 10");
-                llXAxis.setLineWidth(4f);
-                llXAxis.enableDashedLine(10f, 10f, 0f);
-                llXAxis.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-                llXAxis.setTextSize(10f);
-
-                XAxis xAxis = mChart.getXAxis();
-                xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-
-                YAxis leftAxis = mChart.getAxisLeft();
-                leftAxis.removeAllLimitLines(); // reset all limit lines to avoid overlapping lines
-
-                mChart.setAutoScaleMinMaxEnabled(true);
-
-                leftAxis.setStartAtZero(false);
-                leftAxis.enableGridDashedLine(10f, 10f, 0f);
-
-                // limit lines are drawn behind data (and not on top)
-                leftAxis.setDrawLimitLinesBehindData(true);
-
-                mChart.getAxisRight().setEnabled(false);
-
-
-                // add data
-                setData(mChart, mXValues, mAbsorbanceFloat, ChartType.ABSORBANCE);
-
-                mChart.animateX(2500, Easing.EasingOption.EaseInOutQuart);
-
-                // get the legend (only possible after setting data)
-                Legend l = mChart.getLegend();
-
-                // modify the legend ...
-                l.setForm(Legend.LegendForm.LINE);
-                return layout;
-            } else if (customPagerEnum.getLayoutResId() == R.layout.page_graph_reflectance) {
-
-                LineChart mChart = (LineChart) layout.findViewById(R.id.lineChartRef);
-                mChart.setDrawGridBackground(false);
-
-                // no description text
-                mChart.setDescription("");
-                //mChart.setNoDataTextDescription("You need to provide data for the chart.");
-
-                // enable touch gestures
-                mChart.setTouchEnabled(true);
-
-                // enable scaling and dragging
-                mChart.setDragEnabled(true);
-                mChart.setScaleEnabled(true);
-
-                // if disabled, scaling can be done on x- and y-axis separately
-                mChart.setPinchZoom(true);
-
-                // x-axis limit line
-                LimitLine llXAxis = new LimitLine(10f, "Index 10");
-                llXAxis.setLineWidth(4f);
-                llXAxis.enableDashedLine(10f, 10f, 0f);
-                llXAxis.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-                llXAxis.setTextSize(10f);
-
-                XAxis xAxis = mChart.getXAxis();
-                xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-
-                YAxis leftAxis = mChart.getAxisLeft();
-                leftAxis.removeAllLimitLines(); // reset all limit lines to avoid overlapping lines
-
-                mChart.setAutoScaleMinMaxEnabled(true);
-
-                leftAxis.setStartAtZero(false);
-                leftAxis.enableGridDashedLine(10f, 10f, 0f);
-
-                // limit lines are drawn behind data (and not on top)
-                leftAxis.setDrawLimitLinesBehindData(true);
-
-                mChart.getAxisRight().setEnabled(false);
-
-
-                // add data
-                setData(mChart, mXValues, mReflectanceFloat, ChartType.REFLECTANCE);
-
-                mChart.animateX(2500, Easing.EasingOption.EaseInOutQuart);
-
-                // get the legend (only possible after setting data)
-                Legend l = mChart.getLegend();
-
-                // modify the legend ...
-                l.setForm(Legend.LegendForm.LINE);
-                return layout;
-            } else {
-                return layout;
+            if (layoutResId == R.layout.page_graph_intensity) {
+                mChart = layout.findViewById(R.id.lineChartInt);
+                chartData = mIntensityFloat;
+                chartType = ChartType.INTENSITY;
+            } else if (layoutResId == R.layout.page_graph_absorbance) {
+                mChart = layout.findViewById(R.id.lineChartAbs);
+                chartData = mAbsorbanceFloat;
+                chartType = ChartType.ABSORBANCE;
+            } else if (layoutResId == R.layout.page_graph_reflectance) {
+                mChart = layout.findViewById(R.id.lineChartRef);
+                chartData = mReflectanceFloat;
+                chartType = ChartType.REFLECTANCE;
             }
+
+            if (mChart != null && chartData != null && chartType != null) {
+                mChart.setDrawGridBackground(false);
+
+                // Set empty description (required for MPAndroidChart v3+)
+                Description desc = new Description();
+                desc.setText("");
+                mChart.setDescription(desc);
+
+                // Optional: Text when no data is available
+                mChart.setNoDataText("You need to provide data for the chart.");
+
+                // Enable chart interaction
+                mChart.setTouchEnabled(true);
+                mChart.setDragEnabled(true);
+                mChart.setScaleEnabled(true);
+                mChart.setPinchZoom(true);
+
+                // Limit line on X-axis
+                LimitLine llXAxis = new LimitLine(10f, "Index 10");
+                llXAxis.setLineWidth(4f);
+                llXAxis.enableDashedLine(10f, 10f, 0f);
+                llXAxis.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
+                llXAxis.setTextSize(10f);
+
+                XAxis xAxis = mChart.getXAxis();
+                xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+                xAxis.addLimitLine(llXAxis);
+
+                YAxis leftAxis = mChart.getAxisLeft();
+                leftAxis.removeAllLimitLines();
+                leftAxis.enableGridDashedLine(10f, 10f, 0f);
+                leftAxis.setDrawLimitLinesBehindData(true);
+                leftAxis.setAxisMinimum(chartType == ChartType.INTENSITY ? 0f : Float.NEGATIVE_INFINITY);
+
+                mChart.getAxisRight().setEnabled(false);
+                mChart.setAutoScaleMinMaxEnabled(true);
+
+                // Add chart data
+                setData(mChart, mXValues, chartData, chartType);
+
+                // Animate chart
+                mChart.animateX(2500, Easing.EaseInOutQuart);
+
+                // Customize legend
+                Legend legend = mChart.getLegend();
+                legend.setForm(Legend.LegendForm.LINE);
+            }
+
+            return layout;
         }
 
         @Override
@@ -715,8 +623,11 @@ public class GraphActivity extends Activity {
             ArrayList<LineDataSet> dataSets = new ArrayList<>();
             dataSets.add(set1); // add the datasets
 
-            // create a data object with the datasets
-            LineData data = new LineData(xValues, dataSets);
+            List<ILineDataSet> iLineDataSets = new ArrayList<>();
+            for (LineDataSet set : dataSets) {
+                iLineDataSets.add(set);
+            }
+            LineData data = new LineData(iLineDataSets);
 
             // set data
             mChart.setData(data);
@@ -740,10 +651,19 @@ public class GraphActivity extends Activity {
             set1.setDrawFilled(true);
 
             ArrayList<LineDataSet> dataSets = new ArrayList<>();
-            dataSets.add(set1); // add the datasets
+            dataSets.add(set1); // and so on
 
-            // create a data object with the datasets
-            LineData data = new LineData(xValues, dataSets);
+// Old: ArrayList<String> xValues = ... (no longer used in constructor)
+            List<ILineDataSet> iLineDataSets = new ArrayList<>();
+            for (LineDataSet set : dataSets) {
+                iLineDataSets.add(set);
+            }
+            LineData data = new LineData(iLineDataSets);
+
+// For custom X axis labels
+            XAxis xAxis = mChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(xValues)); // xValues is List<String>
+
 
             // set data
             mChart.setData(data);
@@ -766,11 +686,16 @@ public class GraphActivity extends Activity {
             set1.setFillColor(Color.BLUE);
             set1.setDrawFilled(true);
 
+            // Suppose you have:
             ArrayList<LineDataSet> dataSets = new ArrayList<>();
-            dataSets.add(set1); // add the datasets
+            dataSets.add(set1); // add datasets as needed
 
-            // create a data object with the datasets
-            LineData data = new LineData(xValues, dataSets);
+// Convert to List<ILineDataSet>
+            List<ILineDataSet> iLineDataSets = new ArrayList<>(dataSets);
+
+// Use only the datasets to create LineData
+            LineData data = new LineData(iLineDataSets);
+
 
             // set data
             mChart.setData(data);
@@ -793,11 +718,15 @@ public class GraphActivity extends Activity {
             set1.setFillColor(Color.BLACK);
             set1.setDrawFilled(true);
 
+            // Suppose you have:
             ArrayList<LineDataSet> dataSets = new ArrayList<>();
-            dataSets.add(set1); // add the datasets
+            dataSets.add(set1); // add datasets as needed
 
-            // create a data object with the datasets
-            LineData data = new LineData(xValues, dataSets);
+// Convert to List<ILineDataSet>
+            List<ILineDataSet> iLineDataSets = new ArrayList<>(dataSets);
+
+// Use only the datasets to create LineData
+            LineData data = new LineData(iLineDataSets);
 
             // set data
             mChart.setData(data);

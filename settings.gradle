@@ -1,1 +1,23 @@
-include ':app', ':MPChartLib'
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+        flatDir {
+            dirs("app/libs") // ✅ or just 'libs' depending on where your AARs are
+        }
+    }
+}
+
+rootProject.name = "NanoScan"
+include(":app")

@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: :nirscannanolibrary:@aar" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/8.11.1/transforms/3adfc817bbe2f33a08260f9a5c3e6101/transformed/jetified-nirscannanolibrary/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.11.1/transforms/3adfc817bbe2f33a08260f9a5c3e6101/transformed/jetified-nirscannanolibrary/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.11.1/transforms/3adfc817bbe2f33a08260f9a5c3e6101/transformed/jetified-nirscannanolibrary/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -18,14 +18,13 @@
         android:theme="@style/AppTheme">
         <activity
             android:name="com.kstechnologies.NanoScan.ScanListActivity"
-            android:label="@string/app_name"
-            android:screenOrientation="portrait">
+            android:exported="true"> <!-- or false depending on your logic -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name="com.kstechnologies.NanoScan.InfoActivity"
             android:label="@string/title_activity_info"
