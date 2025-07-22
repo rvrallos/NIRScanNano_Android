@@ -130,7 +130,9 @@ public class SwipeMenuLayout extends FrameLayout {
 		LayoutParams contentParams = new LayoutParams(
 				LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 		mContentView.setLayoutParams(contentParams);
-		if (mContentView.getId() < 1) {
+		// Assign an ID if none is set to avoid comparing resource ids
+		// using ordering which can be unreliable on some devices
+		if (mContentView.getId() == View.NO_ID) {
 			mContentView.setId(CONTENT_VIEW_ID);
 		}
 

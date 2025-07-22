@@ -116,7 +116,8 @@ public class DeviceStatusActivity extends Activity {
                     tv_temp.setText(getString(R.string.temp_value_f, Float.toString(temp)));
                 }
 
-                tv_humid.setText(getString(R.string.humid_value, intent.getFloatExtra(KSTNanoSDK.EXTRA_HUMID, 0)));
+                tv_humid.setText(getString(R.string.humid_value,
+                        Float.toString(intent.getFloatExtra(KSTNanoSDK.EXTRA_HUMID, 0))));
 
                 ProgressBar pb = (ProgressBar)findViewById(R.id.pb_status);
                 pb.setVisibility(View.INVISIBLE);
