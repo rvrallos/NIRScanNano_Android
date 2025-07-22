@@ -170,7 +170,9 @@ public class GraphActivity extends Activity {
          * if that fails
          */
         try {
-            is = getResources().openRawResource(getResources().getIdentifier(fileName, "raw", getPackageName()));
+            // Remove a possible file extension when looking up raw resources
+            String resourceName = fileName.replace(".csv", "");
+            is = getResources().openRawResource(getResources().getIdentifier(resourceName, "raw", getPackageName()));
             reader = new BufferedReader(new InputStreamReader(is));
         } catch (Resources.NotFoundException e) {
             try {
@@ -184,36 +186,53 @@ public class GraphActivity extends Activity {
             }
         }
 
-        //Read lines in from the file
+        // Read lines from the file
         try {
             String line;
+            int colIntensity = 1;
+            int colAbsorbance = 2;
+            int colReflectance = 3;
+            boolean headerProcessed = false;
+
             if (reader != null) {
                 while ((line = reader.readLine()) != null) {
-                    String[] RowData = line.split(",");
-                    if (RowData[0].equals("(null)")) {
-                        mXValues.add("0");
-                    } else {
-                        if (RowData[0].equals("Wavelength")) {
-                            mXValues.add(RowData[0]);
-                        } else {
-                            mXValues.add(getSpatialFreq(RowData[0]));
+                    String[] rowData = line.split(",");
+
+                    // Determine column order from header if present
+                    if (!headerProcessed) {
+                        if (rowData[0].equalsIgnoreCase("Wavelength")) {
+                            for (int i = 1; i < rowData.length; i++) {
+                                String col = rowData[i].trim().toLowerCase();
+                                if (col.contains("intensity")) {
+                                    colIntensity = i;
+                                } else if (col.contains("absorbance")) {
+                                    colAbsorbance = i;
+                                } else if (col.contains("reflectance")) {
+                                    colReflectance = i;
+                                }
+                            }
+                            headerProcessed = true;
+                            continue;
                         }
+                        // If first row isn't header, proceed using defaults
+                        headerProcessed = true;
                     }
-                    if (RowData[1].equals("(null)")) {
-                        mIntensityString.add("0");
-                    } else {
-                        mIntensityString.add(RowData[1]);
+
+                    // Guard against malformed rows
+                    if (rowData.length <= Math.max(colReflectance, Math.max(colIntensity, colAbsorbance))) {
+                        continue;
                     }
-                    if (RowData[2].equals("(null)")) {
-                        mAbsorbanceString.add("0");
-                    } else {
-                        mAbsorbanceString.add(RowData[2]);
-                    }
-                    if (RowData[3].equals("(null)")) {
-                        mReflectanceString.add("0");
-                    } else {
-                        mReflectanceString.add(RowData[3]);
-                    }
+
+                    mXValues.add(rowData[0].equals("(null)") ? "0" : getSpatialFreq(rowData[0]));
+
+                    String intensityVal = rowData[colIntensity];
+                    mIntensityString.add(intensityVal.equals("(null)") ? "0" : intensityVal);
+
+                    String absorbanceVal = rowData[colAbsorbance];
+                    mAbsorbanceString.add(absorbanceVal.equals("(null)") ? "0" : absorbanceVal);
+
+                    String reflectanceVal = rowData[colReflectance];
+                    mReflectanceString.add(reflectanceVal.equals("(null)") ? "0" : reflectanceVal);
                 }
             }
         } catch (IOException ex) {
@@ -248,11 +267,6 @@ public class GraphActivity extends Activity {
             }
         }
 
-        //Remove the first items since these are column labels
-        mXValues.remove(0);
-        mIntensityString.remove(0);
-        mAbsorbanceString.remove(0);
-        mReflectanceString.remove(0);
 
         //Generate data points and calculate mins and maxes
         for (int i = 0; i < mXValues.size(); i++) {
@@ -631,6 +645,10 @@ public class GraphActivity extends Activity {
             }
             LineData data = new LineData(iLineDataSets);
 
+            // For custom X axis labels
+            XAxis xAxis = mChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(xValues));
+
             // set data
             mChart.setData(data);
 
@@ -698,6 +716,9 @@ public class GraphActivity extends Activity {
 // Use only the datasets to create LineData
             LineData data = new LineData(iLineDataSets);
 
+            // For custom X axis labels
+            XAxis xAxis = mChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(xValues));
 
             // set data
             mChart.setData(data);
@@ -729,6 +750,10 @@ public class GraphActivity extends Activity {
 
 // Use only the datasets to create LineData
             LineData data = new LineData(iLineDataSets);
+
+            // For custom X axis labels
+            XAxis xAxis = mChart.getXAxis();
+            xAxis.setValueFormatter(new IndexAxisValueFormatter(xValues));
 
             // set data
             mChart.setData(data);

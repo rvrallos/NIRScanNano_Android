@@ -43,7 +43,6 @@ public class ScanActivity extends Activity {
     private Handler mHandler;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
-    private static final String DEVICE_NAME = "NIRScanNano";
     private ArrayList<KSTNanoSDK.NanoDevice> nanoDeviceList = new ArrayList<>();
     private NanoScanAdapter nanoScanAdapter;
     private static Context mContext;
@@ -64,7 +63,7 @@ public class ScanActivity extends Activity {
         }
         ListView lv_nanoDevices = (ListView) findViewById(R.id.lv_nanoDevices);
 
-        //Start scanning for devices that match DEVICE_NAME
+        //Start scanning for available Bluetooth LE devices
         final BluetoothManager bluetoothManager =
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
@@ -169,10 +168,9 @@ public class ScanActivity extends Activity {
      * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
      * data (scanRecord).
      * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link ScanActivity#DEVICE_NAME} is found, a call is made to connect
-     * to the device. Also, the Bluetooth should stop scanning, even if
-     * the {@link NanoBLEService#SCAN_PERIOD} has not expired
+     * When a Bluetooth device is found, a call is made to connect to the device.
+     * The Bluetooth scan will stop once a device is discovered, even if the
+     * {@link NanoBLEService#SCAN_PERIOD} has not expired.
      */
     private ScanCallback mLeScanCallback = new ScanCallback() {
         @Override
@@ -188,7 +186,7 @@ public class ScanActivity extends Activity {
             if (name == null && result.getScanRecord() != null) {
                 name = result.getScanRecord().getDeviceName();
             }
-            if (name != null && name.equals(DEVICE_NAME) && result.getScanRecord() != null) {
+            if (name != null && result.getScanRecord() != null) {
                 Boolean isDeviceInList = false;
                 KSTNanoSDK.NanoDevice nanoDevice = new KSTNanoSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
                 for (KSTNanoSDK.NanoDevice d : nanoDeviceList) {

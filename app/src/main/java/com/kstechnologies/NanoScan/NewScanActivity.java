@@ -134,13 +134,13 @@ public class NewScanActivity extends Activity {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private Handler mHandler;
-    private static final String DEVICE_NAME = "NIRScanNano";
     private boolean connected;
     private AlertDialog alertDialog;
     private TextView tv_scan_conf;
     private String preferredDevice;
     private LinearLayout ll_conf;
     private KSTNanoSDK.ScanConfiguration activeConf;
+    private boolean mScanning; // Added flag to track scanning state
 
     private Menu mMenu;
     private boolean serviceBound = false;
@@ -167,19 +167,22 @@ public class NewScanActivity extends Activity {
         if (!perms.isEmpty()) {
             ActivityCompat.requestPermissions(this, perms.toArray(new String[0]), PERMISSION_REQ_CODE);
         } else {
-            Intent gattServiceIntent = new Intent(this, NanoBLEService.class);
-            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-            serviceBound = true;
+            // Only bind service if not already bound
+            if (!serviceBound) {
+                Intent gattServiceIntent = new Intent(this, NanoBLEService.class);
+                bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+                serviceBound = true;
 
-            //Register all needed broadcast receivers
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanDataReadyReceiver, scanDataReadyFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(refReadyReceiver, refReadyFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(notifyCompleteReceiver, notifyCompleteFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalCoeffReceiver, requestCalCoeffFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalMatrixReceiver, requestCalMatrixFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(disconnReceiver, disconnFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanConfReceiver, scanConfFilter);
-            LocalBroadcastManager.getInstance(mContext).registerReceiver(scanStartedReceiver, scanStartedFilter);
+                //Register all needed broadcast receivers
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(scanDataReadyReceiver, scanDataReadyFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(refReadyReceiver, refReadyFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(notifyCompleteReceiver, notifyCompleteFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalCoeffReceiver, requestCalCoeffFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(requestCalMatrixReceiver, requestCalMatrixFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(disconnReceiver, disconnFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(scanConfReceiver, scanConfFilter);
+                LocalBroadcastManager.getInstance(mContext).registerReceiver(scanStartedReceiver, scanStartedFilter);
+            }
         }
     }
 
@@ -194,6 +197,7 @@ public class NewScanActivity extends Activity {
         calProgress = (ProgressBar) findViewById(R.id.calProgress);
         calProgress.setVisibility(View.VISIBLE);
         connected = false;
+        mScanning = false; // Initialize scanning state
 
         ll_conf = (LinearLayout)findViewById(R.id.ll_conf);
         ll_conf.setClickable(false);
@@ -314,6 +318,19 @@ public class NewScanActivity extends Activity {
         mAbsorbanceFloat = new ArrayList<>();
         mReflectanceFloat = new ArrayList<>();
         mWavelengthFloat = new ArrayList<>();
+
+        // Re-check permissions and potentially start scan if not already scanning
+        // This handles cases where the app was paused and resumed
+        if (!mScanning && mNanoBLEService != null) {
+            // The service is already bound, so we can directly initiate the scan logic
+            // based on preferred device or general scan.
+            if (SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null) != null) {
+                preferredDevice = SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null);
+                scanPreferredLeDevice(true);
+            } else {
+                scanLeDevice(true);
+            }
+        }
     }
 
     /*
@@ -334,12 +351,23 @@ public class NewScanActivity extends Activity {
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(requestCalMatrixReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(disconnReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(scanConfReceiver);
+        LocalBroadcastManager.getInstance(mContext).unregisterReceiver(scanStartedReceiver); // Unregister scan started receiver
 
         mHandler.removeCallbacksAndMessages(null);
 
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.saveOS, btn_os.isChecked());
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.saveSD, btn_sd.isChecked());
         SettingsManager.storeBooleanPref(mContext, SettingsManager.SharedPreferencesKeys.continuousScan, btn_continuous.isChecked());
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Stop scanning when the activity is paused to save battery
+        if (mScanning) {
+            scanLeDevice(false);
+            scanPreferredLeDevice(false); // Ensure both types of scans are stopped
+        }
     }
 
     @Override
@@ -614,15 +642,15 @@ public class NewScanActivity extends Activity {
 
             String scanType = intent.getStringExtra(KSTNanoSDK.EXTRA_SCAN_TYPE);
             /*
-            * 7 bytes representing the current data
-            * byte0: uint8_t     year; //< years since 2000
-            * byte1: uint8_t     month; /**< months since January [0-11]
-            * byte2: uint8_t     day; /**< day of the month [1-31]
-            * byte3: uint8_t     day_of_week; /**< days since Sunday [0-6]
-            * byte3: uint8_t     hour; /**< hours since midnight [0-23]
-            * byte5: uint8_t     minute; //< minutes after the hour [0-59]
-            * byte6: uint8_t     second; //< seconds after the minute [0-60]
-            */
+             * 7 bytes representing the current data
+             * byte0: uint8_t     year; //< years since 2000
+             * byte1: uint8_t     month; /**< months since January [0-11]
+             * byte2: uint8_t     day; /**< day of the month [1-31]
+             * byte3: uint8_t     day_of_week; /**< days since Sunday [0-6]
+             * byte3: uint8_t     hour; /**< hours since midnight [0-23]
+             * byte5: uint8_t     minute; //< minutes after the hour [0-59]
+             * byte6: uint8_t     second; //< seconds after the minute [0-60]
+             */
             String scanDate = intent.getStringExtra(KSTNanoSDK.EXTRA_SCAN_DATE);
 
             KSTNanoSDK.ReferenceCalibration ref = KSTNanoSDK.ReferenceCalibration.currentCalibration.get(0);
@@ -791,6 +819,7 @@ public class NewScanActivity extends Activity {
                 writer.writeAll(data);
                 writer.close();
             } catch (IOException e) {
+                Log.e("NewScanActivity", "Error writing CSV file: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -836,6 +865,7 @@ public class NewScanActivity extends Activity {
 
                 writer.close();
             } catch (IOException e) {
+                Log.e("NewScanActivity", "Error writing CSV dictionary file: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -855,7 +885,7 @@ public class NewScanActivity extends Activity {
                 finish();
             }
 
-            //Start scanning for devices that match DEVICE_NAME
+            //Start scanning for available Bluetooth LE devices
             final BluetoothManager bluetoothManager =
                     (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             mBluetoothAdapter = bluetoothManager.getAdapter();
@@ -865,17 +895,22 @@ public class NewScanActivity extends Activity {
                 Toast.makeText(NewScanActivity.this, "Please ensure Bluetooth is enabled and try again", Toast.LENGTH_SHORT).show();
             }
             mHandler = new Handler();
-            if (SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null) != null) {
-                preferredDevice = SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null);
-                scanPreferredLeDevice(true);
-            } else {
-                scanLeDevice(true);
+            // Only start scan if not already scanning
+            if (!mScanning) {
+                if (SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null) != null) {
+                    preferredDevice = SettingsManager.getStringPref(mContext, SettingsManager.SharedPreferencesKeys.preferredDevice, null);
+                    scanPreferredLeDevice(true);
+                } else {
+                    scanLeDevice(true);
+                }
             }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             mNanoBLEService = null;
+            serviceBound = false; // Update service bound state
+            mScanning = false; // Reset scanning state on service disconnect
         }
     };
 
@@ -884,10 +919,9 @@ public class NewScanActivity extends Activity {
      * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
      * data (scanRecord).
      * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link NewScanActivity#DEVICE_NAME} is found, a call is made to connect
-     * to the device. Also, the Bluetooth should stop scanning, even if
-     * the {@link NanoBLEService#SCAN_PERIOD} has not expired
+     * When a Bluetooth device is found a connection attempt is made. The scan
+     * will stop once a device is discovered even if the
+     * {@link NanoBLEService#SCAN_PERIOD} has not expired.
      */
     private final ScanCallback mLeScanCallback = new ScanCallback() {
         @Override
@@ -903,12 +937,25 @@ public class NewScanActivity extends Activity {
                 name = result.getScanRecord().getDeviceName();
             }
             if (name != null) {
-                if (name.equals(DEVICE_NAME)) {
-                    mNanoBLEService.connect(device.getAddress());
-                    connected = true;
-                    scanLeDevice(false);
-                }
+                // Connect to the first device discovered. Name filtering has
+                // been removed to allow scanners with arbitrary names.
+                // IMPORTANT: If your NIRScan device has a specific name prefix (e.g., "NIRScan-")
+                // or a known service UUID, you might want to add a more specific check here
+                // to ensure you connect to the correct device.
+                // Example: if (name.startsWith("NIRScan")) { ... }
+                mNanoBLEService.connect(device.getAddress());
+                connected = true;
+                scanLeDevice(false); // Stop scan after connecting
             }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+            Log.e("NewScanActivity", "BLE Scan Failed (mLeScanCallback): " + errorCode);
+            mScanning = false; // Ensure scanning state is updated on failure
+            Toast.makeText(mContext, "BLE Scan Failed: " + errorCode, Toast.LENGTH_LONG).show();
+            // Consider more robust error handling or user notification here
         }
     };
 
@@ -917,10 +964,9 @@ public class NewScanActivity extends Activity {
      * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
      * data (scanRecord).
      * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link NewScanActivity#DEVICE_NAME} is found, a call is made to connect
-     * to the device. Also, the Bluetooth should stop scanning, even if
-     * the {@link NanoBLEService#SCAN_PERIOD} has not expired
+     * * When the preferred device is found a connection attempt is made. The scan
+     * will stop once the preferred device is discovered even if the
+     * {@link NanoBLEService#SCAN_PERIOD} has not expired.
      */
     private final ScanCallback mPreferredLeScanCallback = new ScanCallback() {
         @Override
@@ -935,15 +981,22 @@ public class NewScanActivity extends Activity {
             if (name == null && result.getScanRecord() != null) {
                 name = result.getScanRecord().getDeviceName();
             }
-            if (name != null) {
-                if (name.equals(DEVICE_NAME)) {
-                    if (device.getAddress().equals(preferredDevice)) {
-                        mNanoBLEService.connect(device.getAddress());
-                        connected = true;
-                        scanPreferredLeDevice(false);
-                    }
-                }
+            if (name != null && device.getAddress().equals(preferredDevice)) {
+                // Connect when the preferred device address is found regardless
+                // of the advertised name.
+                mNanoBLEService.connect(device.getAddress());
+                connected = true;
+                scanPreferredLeDevice(false); // Stop scan after connecting
             }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+            Log.e("NewScanActivity", "BLE Scan Failed (mPreferredLeScanCallback): " + errorCode);
+            mScanning = false; // Ensure scanning state is updated on failure
+            Toast.makeText(mContext, "Preferred BLE Scan Failed: " + errorCode, Toast.LENGTH_LONG).show();
+            // Consider more robust error handling or user notification here
         }
     };
 
@@ -955,22 +1008,48 @@ public class NewScanActivity extends Activity {
      * has been found {@link NewScanActivity#mLeScanCallback}
      *
      * @param enable Tells the Bluetooth adapter {@link KSTNanoSDK#mBluetoothAdapter} if
-     *               it should start or stop scanning
+     * it should start or stop scanning
      */
     private void scanLeDevice(final boolean enable) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+        // Check permissions before attempting to scan
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Permissions not granted for BLE scan.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Location permission not granted for BLE scan.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        if(mBluetoothLeScanner == null){
+            Log.e("NewScanActivity", "Bluetooth LE scanner not initialized.");
+            Toast.makeText(NewScanActivity.this, "Bluetooth LE scanner not initialized.", Toast.LENGTH_SHORT).show();
+            finish(); // Exit if scanner is null
             return;
         }
 
         if (enable) {
+            if (mScanning) { // Don't start if already scanning
+                Log.d("NewScanActivity", "Scan already in progress, not starting new general scan.");
+                return;
+            }
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    if(mBluetoothLeScanner != null) {
+                    if(mBluetoothLeScanner != null && mScanning) { // Check mScanning before stopping
                         try {
                             mBluetoothLeScanner.stopScan(mLeScanCallback);
-                        } catch (SecurityException ignore) {
+                            mScanning = false; // Update scanning state
+                            Log.d("NewScanActivity", "General scan stopped by timeout.");
+                        } catch (SecurityException e) {
+                            Log.e("NewScanActivity", "Security exception stopping general scan: " + e.getMessage());
+                        } catch (IllegalStateException e) {
+                            Log.e("NewScanActivity", "Illegal state stopping general scan: " + e.getMessage());
                         }
                         if (!connected) {
                             notConnectedDialog();
@@ -978,19 +1057,30 @@ public class NewScanActivity extends Activity {
                     }
                 }
             }, NanoBLEService.SCAN_PERIOD);
-            if(mBluetoothLeScanner != null) {
-                try {
-                    mBluetoothLeScanner.startScan(mLeScanCallback);
-                } catch (SecurityException ignore) {
-                }
-            }else{
-                finish();
-                Toast.makeText(NewScanActivity.this, "Please ensure Bluetooth is enabled and try again", Toast.LENGTH_SHORT).show();
+            try {
+                mBluetoothLeScanner.startScan(mLeScanCallback);
+                mScanning = true; // Update scanning state
+                Log.d("NewScanActivity", "General scan started.");
+            } catch (SecurityException e) {
+                Log.e("NewScanActivity", "Security exception starting general scan: " + e.getMessage());
+                mScanning = false; // Reset scanning state on error
+            } catch (IllegalStateException e) {
+                Log.e("NewScanActivity", "Illegal state starting general scan: " + e.getMessage());
+                mScanning = false; // Reset scanning state on error
             }
         } else {
+            if (!mScanning) { // Don't stop if not scanning
+                Log.d("NewScanActivity", "No general scan active to stop.");
+                return;
+            }
             try {
                 mBluetoothLeScanner.stopScan(mLeScanCallback);
-            } catch (SecurityException ignore) {
+                mScanning = false; // Update scanning state
+                Log.d("NewScanActivity", "General scan stopped explicitly.");
+            } catch (SecurityException e) {
+                Log.e("NewScanActivity", "Security exception stopping general scan: " + e.getMessage());
+            } catch (IllegalStateException e) {
+                Log.e("NewScanActivity", "Illegal state stopping general scan: " + e.getMessage());
             }
         }
     }
@@ -1003,36 +1093,79 @@ public class NewScanActivity extends Activity {
      * has been found {@link NewScanActivity#mPreferredLeScanCallback}
      *
      * @param enable Tells the Bluetooth adapter {@link KSTNanoSDK#mBluetoothAdapter} if
-     *               it should start or stop scanning
+     * it should start or stop scanning
      */
     private void scanPreferredLeDevice(final boolean enable) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+        // Check permissions before attempting to scan
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Permissions not granted for BLE scan.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Location permission not granted for BLE scan.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        if(mBluetoothLeScanner == null){
+            Log.e("NewScanActivity", "Bluetooth LE scanner not initialized.");
+            Toast.makeText(NewScanActivity.this, "Bluetooth LE scanner not initialized.", Toast.LENGTH_SHORT).show();
+            finish(); // Exit if scanner is null
             return;
         }
 
         if (enable) {
+            if (mScanning) { // Don't start if already scanning
+                Log.d("NewScanActivity", "Scan already in progress, not starting new preferred scan.");
+                return;
+            }
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
-                    } catch (SecurityException ignore) {
-                    }
-                    if (!connected) {
-
-                        scanLeDevice(true);
+                    if(mBluetoothLeScanner != null && mScanning) { // Check mScanning before stopping
+                        try {
+                            mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
+                            mScanning = false; // Update scanning state
+                            Log.d("NewScanActivity", "Preferred scan stopped by timeout.");
+                        } catch (SecurityException e) {
+                            Log.e("NewScanActivity", "Security exception stopping preferred scan: " + e.getMessage());
+                        } catch (IllegalStateException e) {
+                            Log.e("NewScanActivity", "Illegal state stopping preferred scan: " + e.getMessage());
+                        }
+                        if (!connected) {
+                            scanLeDevice(true); // Fallback to general scan if preferred not found
+                        }
                     }
                 }
             }, NanoBLEService.SCAN_PERIOD);
             try {
                 mBluetoothLeScanner.startScan(mPreferredLeScanCallback);
-            } catch (SecurityException ignore) {
+                mScanning = true; // Update scanning state
+                Log.d("NewScanActivity", "Preferred scan started.");
+            } catch (SecurityException e) {
+                Log.e("NewScanActivity", "Security exception starting preferred scan: " + e.getMessage());
+                mScanning = false; // Reset scanning state on error
+            } catch (IllegalStateException e) {
+                Log.e("NewScanActivity", "Illegal state starting preferred scan: " + e.getMessage());
+                mScanning = false; // Reset scanning state on error
             }
         } else {
+            if (!mScanning) { // Don't stop if not scanning
+                Log.d("NewScanActivity", "No preferred scan active to stop.");
+                return;
+            }
             try {
                 mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
-            } catch (SecurityException ignore) {
+                mScanning = false; // Update scanning state
+                Log.d("NewScanActivity", "Preferred scan stopped explicitly.");
+            } catch (SecurityException e) {
+                Log.e("NewScanActivity", "Security exception stopping preferred scan: " + e.getMessage());
+            } catch (IllegalStateException e) {
+                Log.e("NewScanActivity", "Illegal state stopping preferred scan: " + e.getMessage());
             }
         }
     }
