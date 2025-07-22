@@ -893,9 +893,16 @@ public class NewScanActivity extends Activity {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
+            String name = null;
+            if (ActivityCompat.checkSelfPermission(NewScanActivity.this,
+                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                name = device.getName();
+            }
+            if (name == null && result.getScanRecord() != null) {
+                name = result.getScanRecord().getDeviceName();
+            }
             if (name != null) {
-                if (device.getName().equals(DEVICE_NAME)) {
+                if (name.equals(DEVICE_NAME)) {
                     mNanoBLEService.connect(device.getAddress());
                     connected = true;
                     scanLeDevice(false);
@@ -919,9 +926,16 @@ public class NewScanActivity extends Activity {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
+            String name = null;
+            if (ActivityCompat.checkSelfPermission(NewScanActivity.this,
+                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                name = device.getName();
+            }
+            if (name == null && result.getScanRecord() != null) {
+                name = result.getScanRecord().getDeviceName();
+            }
             if (name != null) {
-                if (device.getName().equals(DEVICE_NAME)) {
+                if (name.equals(DEVICE_NAME)) {
                     if (device.getAddress().equals(preferredDevice)) {
                         mNanoBLEService.connect(device.getAddress());
                         connected = true;
@@ -943,13 +957,20 @@ public class NewScanActivity extends Activity {
      *               it should start or stop scanning
      */
     private void scanLeDevice(final boolean enable) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if(mBluetoothLeScanner != null) {
-                        mBluetoothLeScanner.stopScan(mLeScanCallback);
+                        try {
+                            mBluetoothLeScanner.stopScan(mLeScanCallback);
+                        } catch (SecurityException ignore) {
+                        }
                         if (!connected) {
                             notConnectedDialog();
                         }
@@ -957,13 +978,19 @@ public class NewScanActivity extends Activity {
                 }
             }, NanoBLEService.SCAN_PERIOD);
             if(mBluetoothLeScanner != null) {
-                mBluetoothLeScanner.startScan(mLeScanCallback);
+                try {
+                    mBluetoothLeScanner.startScan(mLeScanCallback);
+                } catch (SecurityException ignore) {
+                }
             }else{
                 finish();
                 Toast.makeText(NewScanActivity.this, "Please ensure Bluetooth is enabled and try again", Toast.LENGTH_SHORT).show();
             }
         } else {
-            mBluetoothLeScanner.stopScan(mLeScanCallback);
+            try {
+                mBluetoothLeScanner.stopScan(mLeScanCallback);
+            } catch (SecurityException ignore) {
+            }
         }
     }
 
@@ -978,21 +1005,34 @@ public class NewScanActivity extends Activity {
      *               it should start or stop scanning
      */
     private void scanPreferredLeDevice(final boolean enable) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
+                    try {
+                        mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
+                    } catch (SecurityException ignore) {
+                    }
                     if (!connected) {
 
                         scanLeDevice(true);
                     }
                 }
             }, NanoBLEService.SCAN_PERIOD);
-            mBluetoothLeScanner.startScan(mPreferredLeScanCallback);
+            try {
+                mBluetoothLeScanner.startScan(mPreferredLeScanCallback);
+            } catch (SecurityException ignore) {
+            }
         } else {
-            mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
+            try {
+                mBluetoothLeScanner.stopScan(mPreferredLeScanCallback);
+            } catch (SecurityException ignore) {
+            }
         }
     }
 

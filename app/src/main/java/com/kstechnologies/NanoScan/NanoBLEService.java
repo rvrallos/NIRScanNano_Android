@@ -15,6 +15,9 @@ import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
+import android.content.pm.PackageManager;
+import android.Manifest;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.util.Log;
 import java.io.ByteArrayOutputStream;
@@ -132,6 +135,24 @@ public class NanoBLEService extends Service {
     //Initialize the current scan index to a four-byte zero array
     private byte scanIndex[] = {0x00, 0x00, 0x00, 0x00};
 
+    private boolean hasBluetoothConnectPermission() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                        == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void safeWriteDescriptor(BluetoothGattDescriptor descriptor) {
+        if (descriptor == null) {
+            return;
+        }
+        if (hasBluetoothConnectPermission()) {
+            try {
+                KSTNanoSDK.mBluetoothGatt.writeDescriptor(descriptor);
+            } catch (SecurityException ignore) {
+            }
+        }
+    }
+
     //CCID UUID as a string. The hyphens and lower case letters are intentional and must remain as provided.
     UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
@@ -157,8 +178,13 @@ public class NanoBLEService extends Service {
                     Log.i(TAG, "Connected to GATT server.");
                 }
                 // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +
-                        KSTNanoSDK.mBluetoothGatt.discoverServices());
+                if (hasBluetoothConnectPermission()) {
+                    try {
+                        Log.i(TAG, "Attempting to start service discovery:" +
+                                KSTNanoSDK.mBluetoothGatt.discoverServices());
+                    } catch (SecurityException ignore) {
+                    }
+                }
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = KSTNanoSDK.ACTION_GATT_DISCONNECTED;
@@ -193,7 +219,7 @@ public class NanoBLEService extends Service {
 
                 BluetoothGattDescriptor descriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGCISRetRefCalCoefficients.getDescriptor(CCCD_UUID);
                 descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(descriptor);
+                safeWriteDescriptor(descriptor);
 
             } else {
                 if (debug)
@@ -222,67 +248,67 @@ public class NanoBLEService extends Service {
                     Log.d(TAG, "Wrote Notify request for GCIS_RET_REF_CAL_COEFF");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGCISRetRefCalMatrix.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GCIS_RET_REF_CAL_MATRIX) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GCIS_RET_REF_CAL_MATRIX");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISStartScanNotify.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_START_SCAN) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_START_SCAN");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISRetScanName.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_RET_SCAN_NAME) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_RET_SCAN_NAME");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISRetScanType.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_RET_SCAN_TYPE) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_RET_SCAN_TYPE");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISRetScanDate.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_RET_SCAN_DATE) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_RET_SCAN_DATE");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISRetPacketFormatVersion.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_RET_PKT_FMT_VER) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_RET_PKT_FMT_VER");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISRetSerialScanDataStruct.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_RET_SER_SCAN_DATA_STRUCT) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_RET_SER_SCAN_DATA_STRUCT");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSCISRetStoredConfList.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSCIS_RET_STORED_CONF_LIST) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSCIS_RET_STORED_CONF_LIST");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISSDStoredScanIndicesListData.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_SD_STORED_SCAN_IND_LIST_DATA) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_SD_STORED_SCAN_IND_LIST_DATA");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSDISClearScanNotify.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSDIS_CLEAR_SCAN) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSDIS_CLEAR_SCAN");
                 BluetoothGattDescriptor mDescriptor = KSTNanoSDK.NanoGattCharacteristic.mBleGattCharGSCISRetScanConfData.getDescriptor(CCCD_UUID);
                 mDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                KSTNanoSDK.mBluetoothGatt.writeDescriptor(mDescriptor);
+                safeWriteDescriptor(mDescriptor);
             } else if (descriptor.getCharacteristic().getUuid().compareTo(KSTNanoSDK.NanoGATT.GSCIS_RET_SCAN_CONF_DATA) == 0) {
                 if (debug)
                     Log.d(TAG, "Wrote Notify request for GSCIS_RET_SCAN_CONF_DATA");
@@ -992,15 +1018,29 @@ public class NanoBLEService extends Service {
             return false;
         }
 
+        if (!hasBluetoothConnectPermission()) {
+            Log.w(TAG, "Missing BLUETOOTH_CONNECT permission");
+            return false;
+        }
+
         // Previously connected device.  Try to reconnect.
         if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
                 && KSTNanoSDK.mBluetoothGatt != null) {
             if (debug)
                 Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-            return KSTNanoSDK.mBluetoothGatt.connect();
+            try {
+                return KSTNanoSDK.mBluetoothGatt.connect();
+            } catch (SecurityException e) {
+                return false;
+            }
         }
 
-        final BluetoothDevice device = KSTNanoSDK.mBluetoothAdapter.getRemoteDevice(address);
+        BluetoothDevice device;
+        try {
+            device = KSTNanoSDK.mBluetoothAdapter.getRemoteDevice(address);
+        } catch (SecurityException e) {
+            return false;
+        }
         if (device == null) {
             if (debug)
                 Log.w(TAG, "Device not found.  Unable to connect.");
@@ -1010,9 +1050,17 @@ public class NanoBLEService extends Service {
         // parameter to false.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Log.d(TAG, "Using LE Transport");
-            KSTNanoSDK.mBluetoothGatt = device.connectGatt(this, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+            try {
+                KSTNanoSDK.mBluetoothGatt = device.connectGatt(this, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+            } catch (SecurityException e) {
+                return false;
+            }
         } else {
-            KSTNanoSDK.mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+            try {
+                KSTNanoSDK.mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+            } catch (SecurityException e) {
+                return false;
+            }
         }
         if (debug)
             Log.d(TAG, "Trying to create a new connection.");
@@ -1239,7 +1287,12 @@ public class NanoBLEService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
-        KSTNanoSDK.mBluetoothGatt.disconnect();
+        if (hasBluetoothConnectPermission()) {
+            try {
+                KSTNanoSDK.mBluetoothGatt.disconnect();
+            } catch (SecurityException ignore) {
+            }
+        }
     }
 
     /**
@@ -1250,7 +1303,12 @@ public class NanoBLEService extends Service {
         if (KSTNanoSDK.mBluetoothGatt == null) {
             return;
         }
-        KSTNanoSDK.mBluetoothGatt.close();
+        if (hasBluetoothConnectPermission()) {
+            try {
+                KSTNanoSDK.mBluetoothGatt.close();
+            } catch (SecurityException ignore) {
+            }
+        }
         KSTNanoSDK.mBluetoothGatt = null;
     }
 

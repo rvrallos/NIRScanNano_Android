@@ -180,7 +180,14 @@ public class ScanActivity extends Activity {
             super.onScanResult(callbackType, result);
 
             BluetoothDevice device = result.getDevice();
-            String name = device.getName();
+            String name = null;
+            if (ActivityCompat.checkSelfPermission(ScanActivity.this,
+                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                name = device.getName();
+            }
+            if (name == null && result.getScanRecord() != null) {
+                name = result.getScanRecord().getDeviceName();
+            }
             if (name != null && name.equals(DEVICE_NAME) && result.getScanRecord() != null) {
                 Boolean isDeviceInList = false;
                 KSTNanoSDK.NanoDevice nanoDevice = new KSTNanoSDK.NanoDevice(device, result.getRssi(), result.getScanRecord().getBytes());
@@ -220,26 +227,39 @@ public class ScanActivity extends Activity {
      * This function uses the handler {@link ScanActivity#mHandler} to delay call to stop
      * scanning until after the interval has expired. The start and stop functions take an
      * LeScanCallback parameter that specifies the callback function when a Bluetooth device
-     * has been found {@link NewScanActivity#mLeScanCallback}
+     * has been found {@link ScanActivity#mLeScanCallback}
      *
      * @param enable Tells the Bluetooth adapter {@link ScanActivity#mBluetoothAdapter} if
      *               it should start or stop scanning
      */
     private void scanLeDevice(final boolean enable) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         if(mBluetoothLeScanner == null){
             Toast.makeText(ScanActivity.this, "Could not open LE scanner", Toast.LENGTH_SHORT).show();
-        }else {
+        } else {
             if (enable) {
                 // Stops scanning after a pre-defined scan period.
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        mBluetoothLeScanner.stopScan(mLeScanCallback);
+                        try {
+                            mBluetoothLeScanner.stopScan(mLeScanCallback);
+                        } catch (SecurityException ignore) {
+                        }
                     }
                 }, NanoBLEService.SCAN_PERIOD);
-                mBluetoothLeScanner.startScan(mLeScanCallback);
+                try {
+                    mBluetoothLeScanner.startScan(mLeScanCallback);
+                } catch (SecurityException ignore) {
+                }
             } else {
-                mBluetoothLeScanner.stopScan(mLeScanCallback);
+                try {
+                    mBluetoothLeScanner.stopScan(mLeScanCallback);
+                } catch (SecurityException ignore) {
+                }
             }
         }
     }
